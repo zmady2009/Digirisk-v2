@@ -1,0 +1,75 @@
+{
+  "name": "Digirisk HSE Report",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "hse-report",
+        "options": {
+          "responseCode": 200,
+          "responseData": "={{ { \"status\": \"received\", \"ticket\": $json[\"ticket\"][\"ref\"] ?? null } }}"
+        },
+        "httpMethod": "POST",
+        "responseMode": "onReceived"
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const ticket = $json.ticket || {};\nreturn [{ json: {\n  summary: `${ticket.ref || 'N/A'} - ${(ticket.message || '').slice(0, 120)}`,\n  category: (ticket.category_path || []).map(c => c.label).join(' > ') || null,\n  reporter: `${($json.reporter?.firstname || '')} ${($json.reporter?.lastname || '')}`.trim(),\n  received_at: $json.meta?.sent_at || new Date().toISOString()\n}}];"
+      },
+      "name": "Function - Summary",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "message",
+              "value": "Ticket {{$json.summary}} ({{$json.category}}) reçu à {{$json.received_at}}."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Prepare Notification",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [760, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Function - Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function - Summary": {
+      "main": [
+        [
+          {
+            "node": "Prepare Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Paris"
+  }
+}
