@@ -52,3 +52,17 @@ git clone -b main https://github.com/Evarisk/Digirisk.git digiriskdolibarr
 git clone -b main https://github.com/Evarisk/Saturne.git saturne
 ```
 - Activer le module dans la liste des Modules/Applications installés
+
+## Webhook n8n pour les tickets publics
+
+Activez le webhook depuis **Digirisk ▸ Tickets ▸ Interface publique** puis saisissez l'URL fournie par n8n (ex. `https://n8n.example/webhook/hse-report`). Un secret optionnel permet de générer l'en-tête `X-Digirisk-Signature` (HMAC SHA-256) afin de vérifier l'intégrité du payload côté n8n. Un exemple de workflow est disponible dans `docs/n8n/digirisk-hse-report.json`.
+
+Pour tester manuellement :
+
+```bash
+php -r 'echo "sha256=" . hash_hmac("sha256", file_get_contents("payload.json"), "mon-secret");'
+curl -X POST https://n8n.example/webhook/hse-report \
+  -H "Content-Type: application/json" \
+  -H "X-Digirisk-Signature: sha256=..." \
+  --data @payload.json
+```

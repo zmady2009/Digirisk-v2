@@ -145,8 +145,36 @@ if ($action == 'update_ticket_public_interface_url') {
 }
 
 if ($action == 'setEmails') {
-	dolibarr_set_const($db, 'DIGIRISKDOLIBARR_TICKET_SUBMITTED_SEND_MAIL_TO', GETPOST('emails'), 'integer', 0, '', $conf->entity);
-	setEventMessages($langs->transnoentities('EmailsToNotifySet'), array());
+        dolibarr_set_const($db, 'DIGIRISKDOLIBARR_TICKET_SUBMITTED_SEND_MAIL_TO', GETPOST('emails'), 'integer', 0, '', $conf->entity);
+        setEventMessages($langs->transnoentities('EmailsToNotifySet'), array());
+}
+
+if ($action == 'update_ticket_webhook') {
+        $enableWebhook = GETPOSTINT('webhook_enabled');
+        $endpoint      = trim(GETPOST('webhook_endpoint', 'alphanohtml'));
+        $secret        = GETPOST('webhook_secret', 'restricthtml');
+        $timeout       = max(1, GETPOSTINT('webhook_timeout'));
+        $retry         = max(0, GETPOSTINT('webhook_retry'));
+        $errors        = [];
+
+        if ($enableWebhook && (empty($endpoint) || ! filter_var($endpoint, FILTER_VALIDATE_URL))) {
+                $errors[] = $langs->transnoentities('TicketWebhookInvalidUrl');
+        }
+
+        if (! empty($errors)) {
+                setEventMessages('', $errors, 'errors');
+        } else {
+                dolibarr_set_const($db, 'DIGIRISKDOLIBARR_TICKET_WEBHOOK_ENABLED', $enableWebhook, 'integer', 0, '', $conf->entity);
+                dolibarr_set_const($db, 'DIGIRISKDOLIBARR_TICKET_WEBHOOK_ENDPOINT', $endpoint, 'chaine', 0, '', $conf->entity);
+                dolibarr_set_const($db, 'DIGIRISKDOLIBARR_TICKET_WEBHOOK_TIMEOUT', $timeout, 'integer', 0, '', $conf->entity);
+                dolibarr_set_const($db, 'DIGIRISKDOLIBARR_TICKET_WEBHOOK_RETRY', $retry, 'integer', 0, '', $conf->entity);
+                if ($secret !== '' && $secret !== '********') {
+                        dolibarr_set_const($db, 'DIGIRISKDOLIBARR_TICKET_WEBHOOK_SECRET', $secret, 'chaine', 0, '', $conf->entity);
+                }
+                setEventMessages($langs->transnoentities('TicketWebhookConfigSaved'), []);
+                header('Location: ' . $_SERVER['PHP_SELF'] . '?page_y=' . $pageY);
+                exit;
+        }
 }
 
 if ($action == 'generateExtrafields') {
@@ -433,10 +461,56 @@ if ($conf->global->DIGIRISKDOLIBARR_TICKET_ENABLE_PUBLIC_INTERFACE == 1) {
     print '<div class="tabsAction reposition"><button type="submit" class="butAction">' . $langs->trans('Save') . '</button></div>';
     print '</form>';
 
+    print load_fiche_titre($langs->transnoentities('TicketWebhookConfig'), '', '');
+    print '<form method="POST" action="' . $_SERVER['PHP_SELF'] . '">';
+    print '<input type="hidden" name="token" value="' . newToken() . '">';
+    print '<input type="hidden" name="action" value="update_ticket_webhook">';
+    print '<input type="hidden" name="page_y" value="' . $pageY . '">';
+    $storedSecret = getDolGlobalString('DIGIRISKDOLIBARR_TICKET_WEBHOOK_SECRET') ? '********' : '';
+    print '<table class="noborder centpercent">';
+    print '<tr class="liste_titre">';
+    print '<td>' . $langs->transnoentities('Parameters') . '</td>';
+    print '<td class="center">' . $langs->transnoentities('Value') . '</td>';
+    print '<td class="center">' . $langs->transnoentities('Action') . '</td>';
+    print '<td class="center">' . $langs->transnoentities('ShortInfo') . '</td>';
+    print '</tr>';
+    print '<tr class="oddeven">';
+    print '<td>' . $langs->transnoentities('TicketWebhookEnabled') . '</td>';
+    print '<td class="center">' . $form->selectyesno('webhook_enabled', getDolGlobalInt('DIGIRISKDOLIBARR_TICKET_WEBHOOK_ENABLED'), 1) . '</td>';
+    print '<td class="center">&nbsp;</td>';
+    print '<td class="center">' . $form->textwithpicto('', $langs->transnoentities('TicketWebhookEnabledHelp')) . '</td>';
+    print '</tr>';
+    print '<tr class="oddeven">';
+    print '<td>' . $langs->transnoentities('TicketWebhookEndpoint') . '</td>';
+    print '<td class="center"><input type="url" class="minwidth500" name="webhook_endpoint" value="' . dol_escape_htmltag(getDolGlobalString('DIGIRISKDOLIBARR_TICKET_WEBHOOK_ENDPOINT')) . '" placeholder="https://n8n.example/webhook/hse-report" pattern="https?://.*"></td>';
+    print '<td class="center">&nbsp;</td>';
+    print '<td class="center">' . $form->textwithpicto('', $langs->transnoentities('TicketWebhookEndpointHelp')) . '</td>';
+    print '</tr>';
+    print '<tr class="oddeven">';
+    print '<td>' . $langs->transnoentities('TicketWebhookSecret') . '</td>';
+    print '<td class="center"><input type="password" class="minwidth300" name="webhook_secret" value="' . $storedSecret . '" autocomplete="new-password" placeholder="••••••••"></td>';
+    print '<td class="center">&nbsp;</td>';
+    print '<td class="center">' . $form->textwithpicto('', $langs->transnoentities('TicketWebhookSecretHelp')) . '</td>';
+    print '</tr>';
+    print '<tr class="oddeven">';
+    print '<td>' . $langs->transnoentities('TicketWebhookTimeoutRetry') . '</td>';
+    print '<td class="center">';
+    print '<span class="inline-block marginrightonly">' . $langs->trans('Delay') . ' <input type="number" min="1" max="60" name="webhook_timeout" value="' . max(1, getDolGlobalInt('DIGIRISKDOLIBARR_TICKET_WEBHOOK_TIMEOUT')) . '" class="width75"> s</span>';
+    print '<span class="inline-block">' . $langs->trans('Retry') . ' <input type="number" min="0" max="5" name="webhook_retry" value="' . max(0, getDolGlobalInt('DIGIRISKDOLIBARR_TICKET_WEBHOOK_RETRY')) . '" class="width75"></span>';
+    print '</td>';
+    print '<td class="center">&nbsp;</td>';
+    print '<td class="center">' . $form->textwithpicto('', $langs->transnoentities('TicketWebhookTimeoutHelp')) . '</td>';
+    print '</tr>';
+    print '<tr class="oddeven">';
+    print '<td colspan="4" class="center"><button type="submit" class="button reposition">' . $langs->trans('Save') . '</button></td>';
+    print '</tr>';
+    print '</table>';
+    print '</form>';
+
     print load_fiche_titre($langs->transnoentities('Config'), '', '');
 
-	print '<div class="div-table-responsive-no-min">';
-	print '<table class="noborder centpercent">';
+        print '<div class="div-table-responsive-no-min">';
+        print '<table class="noborder centpercent">';
 	print '<tr class="liste_titre">';
 	print '<td>' . $langs->transnoentities("Parameters") . '</td>';
 	print '<td class="center">' . $langs->transnoentities("Status") . '</td>';

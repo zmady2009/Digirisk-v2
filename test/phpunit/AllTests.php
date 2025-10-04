@@ -101,9 +101,12 @@ class AllTests
 		require_once dirname(__FILE__) . '/FirePermitUnitTest.php';
 		$suite->addTestSuite('FirePermitUnitTest');
 
-		require_once dirname(__FILE__) . '/AccidentUnitTest.php';
-		$suite->addTestSuite('AccidentUnitTest');
+                require_once dirname(__FILE__) . '/AccidentUnitTest.php';
+                $suite->addTestSuite('AccidentUnitTest');
 
-		return $suite;
-	}
+                require_once dirname(__FILE__) . '/DigiriskTicketWebhookUnitTest.php';
+                $suite->addTestSuite('DigiriskTicketWebhookUnitTest');
+
+                return $suite;
+        }
 }

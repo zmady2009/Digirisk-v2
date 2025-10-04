@@ -74,6 +74,21 @@ MulticompanyTicketPublicInterfaceURL = URL de l'interface publique des tickets m
 OriginURL                            = URL d'origine
 ShortURL                             = URL raccourcie
 ExternalURL                          = URL externe
+TicketWebhookConfig                  = Webhook n8n (tickets publics)
+TicketWebhookEnabled                 = Activer le webhook n8n
+TicketWebhookEnabledHelp             = Envoie une requête HTTP POST vers n8n pour chaque ticket public créé.
+TicketWebhookEndpoint                = URL du webhook n8n
+TicketWebhookEndpointHelp            = Utilisez l'URL fournie par n8n (ex. https://n8n.example/webhook/hse-report).
+TicketWebhookSecret                  = Secret partagé (HMAC)
+TicketWebhookSecretHelp              = Laissez vide pour conserver la valeur actuelle. Utilisé pour signer l'en-tête X-Digirisk-Signature.
+TicketWebhookTimeoutRetry            = Délai et ré-essais
+TicketWebhookTimeoutHelp             = Temps d'attente maximum (secondes) et nombre de ré-essais en cas d'échec.
+TicketWebhookInvalidUrl              = URL du webhook invalide.
+TicketWebhookConfigSaved             = Configuration du webhook enregistrée.
+TicketWebhookSent                    = Webhook n8n envoyé
+TicketWebhookSentDetail              = Requête envoyée vers %s (statut HTTP %s).
+TicketWebhookFailed                  = Échec de l'envoi du webhook n8n
+TicketWebhookFailedDetail            = Impossible d'appeler %s (statut HTTP %s). Erreur : %s
 
 # DigiQuali Sheet - Modèles
 LinkDigiriskdolibarr_digiriskstandard                 = Activer le lien avec les entités principale Digirisk Standard

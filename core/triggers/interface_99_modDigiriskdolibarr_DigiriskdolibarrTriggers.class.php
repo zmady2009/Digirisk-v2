@@ -554,6 +554,7 @@ class InterfaceDigiriskdolibarrTriggers extends DolibarrTriggers
 
             case 'TICKET_PUBLIC_INTERFACE_CREATE' :
                 require_once __DIR__ . '/../../../saturne/class/saturnemail.class.php';
+                require_once __DIR__ . '/../../class/digiriskticketwebhook.class.php';
 
                 $categories = $object->getCategoriesCommon('ticket');
                 if (is_array($categories) && !empty($categories)) {
@@ -613,6 +614,39 @@ class InterfaceDigiriskdolibarrTriggers extends DolibarrTriggers
                         }
                     }
                 }
+                if (getDolGlobalInt('DIGIRISKDOLIBARR_TICKET_WEBHOOK_ENABLED') && getDolGlobalString('DIGIRISKDOLIBARR_TICKET_WEBHOOK_ENDPOINT')) {
+                    $langs->loadLangs(['digiriskdolibarr@digiriskdolibarr']);
+                    $webhookService = new DigiriskTicketWebhook($this->db, $conf, $langs);
+                    $payload = $webhookService->buildPayload($object);
+                    $resultWebhook = $webhookService->dispatch($payload, [
+                        'endpoint' => getDolGlobalString('DIGIRISKDOLIBARR_TICKET_WEBHOOK_ENDPOINT'),
+                        'secret'   => getDolGlobalString('DIGIRISKDOLIBARR_TICKET_WEBHOOK_SECRET'),
+                        'timeout'  => getDolGlobalInt('DIGIRISKDOLIBARR_TICKET_WEBHOOK_TIMEOUT') ?: 5,
+                        'retry'    => getDolGlobalInt('DIGIRISKDOLIBARR_TICKET_WEBHOOK_RETRY') ?: 0,
+                    ]);
+
+                    $webhookAction = new ActionComm($this->db);
+                    $webhookAction->elementtype = 'ticket';
+                    $webhookAction->type_code = 'AC_OTH_AUTO';
+                    $webhookAction->code = 'AC_' . $action;
+                    $webhookAction->datep = $now;
+                    $webhookAction->fk_element = $object->id;
+                    $webhookAction->userownerid = $user->id;
+                    $webhookAction->percentage = -1;
+
+                    if (! empty($resultWebhook['success'])) {
+                        $webhookAction->label = $langs->transnoentities('TicketWebhookSent');
+                        $webhookAction->note_private = $langs->transnoentities('TicketWebhookSentDetail', getDolGlobalString('DIGIRISKDOLIBARR_TICKET_WEBHOOK_ENDPOINT'), $resultWebhook['status']);
+                    } else {
+                        $errorMessage = $resultWebhook['error'] ?? '';
+                        dol_syslog(__METHOD__ . ' webhook error: ' . $errorMessage, LOG_WARNING);
+                        $webhookAction->label = $langs->transnoentities('TicketWebhookFailed');
+                        $webhookAction->note_private = $langs->transnoentities('TicketWebhookFailedDetail', getDolGlobalString('DIGIRISKDOLIBARR_TICKET_WEBHOOK_ENDPOINT'), $resultWebhook['status'] ?? 0, $errorMessage);
+                    }
+
+                    $webhookAction->create($user);
+                }
+
                 break;
 
             case 'RISKSIGN_CREATE' :
