@@ -4,7 +4,12 @@
  * @since   21.1.0
  * @version 21.1.0
  */
-window.digiriskdolibarr.digiai = {};
+window.digiriskdolibarr.digiai = {
+  state: {
+    history: [],
+    lastAnalysis: null
+  }
+};
 
 /**
  * La méthode appelée automatiquement par la bibliothèque DigiriskDolibarr.
@@ -17,6 +22,7 @@ window.digiriskdolibarr.digiai = {};
 window.digiriskdolibarr.digiai.init = function() {
   window.digiriskdolibarr.digiai.event();
   window.digiriskdolibarr.digiai.initTabs();
+  window.digiriskdolibarr.digiai.restoreHistory();
   // window.digiriskdolibarr.digiai.bypassSaturneForDigiAI();
 };
 
@@ -67,6 +73,115 @@ window.digiriskdolibarr.digiai.switchTab = function(e) {
 
   $(this).addClass('active');
   $('#' + targetTab).addClass('active');
+};
+
+/**
+ * Restore DigiAI local history from storage.
+ *
+ * @since   23.0.0
+ * @version 23.0.0
+ *
+ * @return {void}
+ */
+window.digiriskdolibarr.digiai.restoreHistory = function() {
+  try {
+    const saved = localStorage.getItem('digiai.history');
+    if (!saved) {
+      return;
+    }
+
+    const parsed = JSON.parse(saved);
+    if (Array.isArray(parsed)) {
+      window.digiriskdolibarr.digiai.state.history = parsed;
+    }
+    window.digiriskdolibarr.digiai.renderHistory();
+  } catch (error) {
+    console.warn('Unable to restore DigiAI history', error);
+  }
+};
+
+/**
+ * Persist current DigiAI history to storage.
+ *
+ * @since   23.0.0
+ * @version 23.0.0
+ *
+ * @return {void}
+ */
+window.digiriskdolibarr.digiai.persistHistory = function() {
+  try {
+    localStorage.setItem('digiai.history', JSON.stringify(window.digiriskdolibarr.digiai.state.history));
+  } catch (error) {
+    console.warn('Unable to persist DigiAI history', error);
+  }
+};
+
+/**
+ * Render local analysis history list if the placeholder exists.
+ *
+ * @since   23.0.0
+ * @version 23.0.0
+ *
+ * @return {void}
+ */
+window.digiriskdolibarr.digiai.renderHistory = function() {
+  const container = document.querySelector('[data-digiai-history]');
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = '';
+  window.digiriskdolibarr.digiai.state.history.forEach((entry, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button small digiai-history-entry';
+    button.textContent = `${entry.label} — ${entry.timestamp}`;
+    button.addEventListener('click', () => {
+      window.digiriskdolibarr.digiai.displayResults(entry.payload, true);
+    });
+
+    container.appendChild(button);
+    if (index < window.digiriskdolibarr.digiai.state.history.length - 1) {
+      container.appendChild(document.createElement('br'));
+    }
+  });
+};
+
+/**
+ * Pushes a new entry in history and persists it.
+ *
+ * @param {Object} payload
+ * @return {void}
+ */
+window.digiriskdolibarr.digiai.pushHistoryEntry = function(payload) {
+  const history = window.digiriskdolibarr.digiai.state.history;
+  const metadata = payload && payload.metadata ? payload.metadata : {};
+  const entry = {
+    label: metadata.label || window.digiriskdolibarr.digiai.buildDefaultLabel(payload),
+    timestamp: new Date().toLocaleString(),
+    payload: payload
+  };
+
+  history.unshift(entry);
+
+  if (history.length > 10) {
+    history.length = 10;
+  }
+
+  window.digiriskdolibarr.digiai.persistHistory();
+  window.digiriskdolibarr.digiai.renderHistory();
+};
+
+/**
+ * Builds a default label for an analysis result.
+ *
+ * @param {Object} payload
+ * @return {string}
+ */
+window.digiriskdolibarr.digiai.buildDefaultLabel = function(payload) {
+  const riskCount = payload && Array.isArray(payload.risks) ? payload.risks.length : 0;
+  const summaries = payload && Array.isArray(payload.summaries) ? payload.summaries.join(', ') : '';
+  return `Analyse (${riskCount} risques) ${summaries}`.trim();
 };
 
 /**
@@ -201,35 +316,33 @@ window.digiriskdolibarr.digiai.getChatGptResponse = async function(formData) {
   try {
     let chatGptResponse = await fetch('backend_endpoint_for_chatgpt.php?token=' + token, {
       method: 'POST',
-      body: formData
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
     });
 
-    if (!chatGptResponse.ok) {
-      throw new Error('Pas de clé API ou de jetons suffisants, veuillez configurer votre clé API dans "Configuration => DigiAI"');
-    }
     let chatGptData = await chatGptResponse.json();
 
-    if (chatGptData.error) {
-      throw new Error('Pas de clé API ou de jetons suffisants, veuillez configurer votre clé API dans "Configuration => DigiAI"');
+    if (!chatGptResponse.ok || !chatGptData.success) {
+      let message = chatGptData.error || 'Erreur lors de l\'appel DigiAI';
+      throw new Error(message);
     }
 
-    let rawContent = chatGptData.choices[0].message.content.trim();
-    let cleanedContent = rawContent.replace(/^```json\s*|```$/g, '').trim();
+    window.digiriskdolibarr.digiai.state.lastAnalysis = {
+      payload: chatGptData.data,
+      timestamp: new Date().toISOString()
+    };
 
-    try {
-      JSON.parse(cleanedContent);
-    } catch (e) {
-      throw new Error('Erreur lors de l\'analyse de l\'image, veuillez réessayer');
-    }
-    let risque = JSON.parse(cleanedContent);
-
-    window.digiriskdolibarr.digiai.displayResults(risque);
+    window.digiriskdolibarr.digiai.displayResults(chatGptData.data);
+    window.digiriskdolibarr.digiai.pushHistoryEntry(chatGptData.data);
 
   } catch (error) {
+    console.error('DigiAI error', error);
     alert(error.message);
     $('#digiai_modal').removeClass('modal-active');
   }
-}
+};
 
 /**
  * Affiche les résultats d'analyse dans le tableau
@@ -240,7 +353,10 @@ window.digiriskdolibarr.digiai.getChatGptResponse = async function(formData) {
  * @param {Array} risks - Liste des risques détectés
  * @return {void}
  */
-window.digiriskdolibarr.digiai.displayResults = function(risks) {
+window.digiriskdolibarr.digiai.displayResults = function(payload, fromHistory) {
+  if (typeof fromHistory === 'undefined') {
+    fromHistory = false;
+  }
   $('.modal-analyse-phase').fadeOut(400, function () {
     $('.modal-result-phase').fadeIn(400);
   });
@@ -252,6 +368,13 @@ window.digiriskdolibarr.digiai.displayResults = function(risks) {
 
   let dolUrlRoot = $('#dol_url_root').val();
   const categoryMap = window.digiriskdolibarr.categoryMap;
+
+  let risks = [];
+  if (payload && Array.isArray(payload.risks)) {
+    risks = payload.risks;
+  } else if (Array.isArray(payload)) {
+    risks = payload;
+  }
 
   risks.forEach((risque, index) => {
     let tr = $('<tr class="oddeven" id="new_risk' + index + '">');
@@ -285,6 +408,57 @@ window.digiriskdolibarr.digiai.displayResults = function(risks) {
 
   // Gérer le bouton de soumission
   window.digiriskdolibarr.digiai.handleSubmitButton();
+
+  window.digiriskdolibarr.digiai.renderMetadata(payload);
+  if (!fromHistory) {
+    window.digiriskdolibarr.digiai.highlightNewResults();
+  }
+};
+
+/**
+ * Render metadata, recommendations and summaries when placeholders are present.
+ *
+ * @param {Object} payload
+ * @return {void}
+ */
+window.digiriskdolibarr.digiai.renderMetadata = function(payload) {
+  if (!payload) {
+    return;
+  }
+
+  const recommendationContainer = document.querySelector('[data-digiai-recommendations]');
+  if (recommendationContainer) {
+    recommendationContainer.innerHTML = '';
+    const list = document.createElement('ul');
+    (Array.isArray(payload.recommendations) ? payload.recommendations : []).forEach((item) => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      list.appendChild(li);
+    });
+    recommendationContainer.appendChild(list);
+  }
+
+  const summaryContainer = document.querySelector('[data-digiai-summaries]');
+  if (summaryContainer) {
+    summaryContainer.textContent = (Array.isArray(payload.summaries) ? payload.summaries.join(' / ') : '');
+  }
+
+  const confidenceContainer = document.querySelector('[data-digiai-confidence]');
+  if (confidenceContainer && payload.metadata && typeof payload.metadata.confidence !== 'undefined') {
+    confidenceContainer.textContent = payload.metadata.confidence + '%';
+  }
+};
+
+/**
+ * Adds a temporary highlight animation to new table rows.
+ *
+ * @return {void}
+ */
+window.digiriskdolibarr.digiai.highlightNewResults = function() {
+  $('#risque_table tbody tr').addClass('digiai-highlight');
+  setTimeout(function() {
+    $('#risque_table tbody tr').removeClass('digiai-highlight');
+  }, 2000);
 };
 
 /**
