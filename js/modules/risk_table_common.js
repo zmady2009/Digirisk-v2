@@ -88,8 +88,9 @@ window.digiriskdolibarr.risk_table_common.createCheckbox = function(checkboxClas
  */
 window.digiriskdolibarr.risk_table_common.createActionsContainer = function(actions) {
   const actionsContainer = $('<div>');
+  const items = Array.isArray(actions) ? actions : [];
 
-  actions.forEach(action => {
+  items.forEach(action => {
     const textarea = $('<textarea>')
       .addClass('form-control action-textarea')
       .val(action)
