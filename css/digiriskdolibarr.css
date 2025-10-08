@@ -3907,3 +3907,21 @@ tr.liste_titre th.liste_titre:not(.maxwidthsearch), tr.liste_titre td.liste_titr
 .digiai-chatbot__actions {
   text-align: right;
 }
+
+.digiai-public-widget {
+  margin-bottom: 2em;
+  padding: 1.5em;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.digiai-public-widget h3 {
+  margin-top: 0;
+  margin-bottom: 0.5em;
+}
+
+.digiai-public-widget p {
+  margin-bottom: 1em;
+  color: #4a4a4a;
+}

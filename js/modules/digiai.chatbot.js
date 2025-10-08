@@ -91,7 +91,8 @@
       this.setLoading(true);
       try {
         const token = window.saturne && window.saturne.toolbox && window.saturne.toolbox.getToken ? window.saturne.toolbox.getToken() : '';
-        const url = this.endpoint + (this.endpoint.indexOf('?') === -1 ? '?token=' + token : '&token=' + token);
+        const encodedToken = encodeURIComponent(token || '');
+        const url = this.endpoint + (this.endpoint.indexOf('?') === -1 ? '?token=' + encodedToken : '&token=' + encodedToken);
 
         const response = await fetch(url, {
           method: 'POST',
@@ -106,8 +107,18 @@
           })
         });
 
-        const result = await response.json();
-        if (!response.ok || !result.success) {
+        if (!response || typeof response.ok === 'undefined') {
+          throw new Error('Réponse réseau DigiAI invalide');
+        }
+
+        let result;
+        try {
+          result = await response.json();
+        } catch (parseError) {
+          throw new Error('Réponse DigiAI illisible');
+        }
+
+        if (!response.ok || !result || !result.success) {
           throw new Error(result.error || 'Erreur DigiAI');
         }
 

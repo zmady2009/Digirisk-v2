@@ -254,7 +254,7 @@ window.digiriskdolibarr.digiai.submitImageForm = async function(e) {
     formData.append('image_file', blob, fileLinked);
     formData.append('action', 'analyze_image');
 
-    window.digiriskdolibarr.digiai.getChatGptResponse(formData);
+    await window.digiriskdolibarr.digiai.getChatGptResponse(formData);
 
   } catch (error) {
     console.error('Erreur lors du chargement de l\'image:', error);
@@ -297,7 +297,7 @@ window.digiriskdolibarr.digiai.submitTextForm = async function(e) {
   formData.append('action', 'analyze_text');
   formData.append('analysis_text', text);
 
-  window.digiriskdolibarr.digiai.getChatGptResponse(formData)
+  await window.digiriskdolibarr.digiai.getChatGptResponse(formData);
 
 };
 
@@ -311,10 +311,17 @@ window.digiriskdolibarr.digiai.submitTextForm = async function(e) {
  */
 window.digiriskdolibarr.digiai.getChatGptResponse = async function(formData) {
 
-  let token = window.saturne.toolbox.getToken();
+  let token = '';
+  try {
+    if (window.saturne && window.saturne.toolbox && typeof window.saturne.toolbox.getToken === 'function') {
+      token = window.saturne.toolbox.getToken();
+    }
+  } catch (error) {
+    console.warn('DigiAI token unavailable', error);
+  }
 
   try {
-    let chatGptResponse = await fetch('backend_endpoint_for_chatgpt.php?token=' + token, {
+    const chatGptResponse = await fetch('backend_endpoint_for_chatgpt.php?token=' + encodeURIComponent(token || ''), {
       method: 'POST',
       body: formData,
       headers: {
@@ -322,10 +329,19 @@ window.digiriskdolibarr.digiai.getChatGptResponse = async function(formData) {
       }
     });
 
-    let chatGptData = await chatGptResponse.json();
+    if (!chatGptResponse || typeof chatGptResponse.ok === 'undefined') {
+      throw new Error('Réponse réseau DigiAI invalide');
+    }
 
-    if (!chatGptResponse.ok || !chatGptData.success) {
-      let message = chatGptData.error || 'Erreur lors de l\'appel DigiAI';
+    let chatGptData;
+    try {
+      chatGptData = await chatGptResponse.json();
+    } catch (parseError) {
+      throw new Error('Réponse DigiAI illisible');
+    }
+
+    if (!chatGptResponse.ok || !chatGptData || !chatGptData.success) {
+      const message = chatGptData && chatGptData.error ? chatGptData.error : 'Erreur lors de l\'appel DigiAI';
       throw new Error(message);
     }
 
@@ -339,7 +355,7 @@ window.digiriskdolibarr.digiai.getChatGptResponse = async function(formData) {
 
   } catch (error) {
     console.error('DigiAI error', error);
-    alert(error.message);
+    alert(error.message || 'Erreur inconnue DigiAI');
     $('#digiai_modal').removeClass('modal-active');
   }
 };
