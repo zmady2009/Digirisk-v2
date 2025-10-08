@@ -39,12 +39,18 @@ require_once DOL_DOCUMENT_ROOT . "/core/lib/admin.lib.php";
 require_once __DIR__ . '/../../lib/digiriskdolibarr.lib.php';
 
 // Translations
-saturne_load_langs(["admin"]);
+saturne_load_langs(["admin", 'digiriskdolibarr@digiriskdolibarr']);
 
 // Parameters
 $action     = GETPOST('action', 'alpha');
 $backtopage = GETPOST('backtopage', 'alpha');
-$openAiApiKey = GETPOST('OpenAIApiKey', 'alpha');
+$openAiApiKey = GETPOST('OpenAIApiKey', 'alphanohtml');
+$digiaiModel = GETPOST('DigiaiModel', 'alphanohtml');
+$digiaiTemperature = GETPOST('DigiaiTemperature', 'alphanohtml');
+$digiaiMaxTokens = GETPOST('DigiaiMaxTokens', 'alpha');
+$digiaiCacheTtl = GETPOST('DigiaiCacheTtl', 'alpha');
+$digiaiEndpoint = GETPOST('DigiaiEndpoint', 'alphanohtml');
+$digiaiEnableChatbot = GETPOSTINT('DigiaiEnableChatbot');
 
 // Security check - Protection if external user
 $permissiontoread = $user->rights->digiriskdolibarr->adminpage->read;
@@ -57,9 +63,16 @@ saturne_check_access($permissiontoread);
 $error = 0;
 
 if ($action == 'update') {
-    if (!empty($openAiApiKey) || $openAiApiKey === '0') {
-        dolibarr_set_const($db, "DIGIRISKDOLIBARR_CHATGPT_API_KEY", $openAiApiKey, 'integer', 0, '', $conf->entity);
-    }
+    $maxTokensValue = ($digiaiMaxTokens === '' ? '' : (int) $digiaiMaxTokens);
+    $cacheTtlValue = ($digiaiCacheTtl === '' ? '' : (int) $digiaiCacheTtl);
+
+    dolibarr_set_const($db, "DIGIRISKDOLIBARR_CHATGPT_API_KEY", $openAiApiKey, 'chaine', 0, '', $conf->entity);
+    dolibarr_set_const($db, "DIGIRISKDOLIBARR_DIGIAI_MODEL", $digiaiModel, 'chaine', 0, '', $conf->entity);
+    dolibarr_set_const($db, "DIGIRISKDOLIBARR_DIGIAI_TEMPERATURE", $digiaiTemperature, 'chaine', 0, '', $conf->entity);
+    dolibarr_set_const($db, "DIGIRISKDOLIBARR_DIGIAI_MAX_TOKENS", $maxTokensValue, 'chaine', 0, '', $conf->entity);
+    dolibarr_set_const($db, "DIGIRISKDOLIBARR_DIGIAI_CACHE_TTL", $cacheTtlValue, 'chaine', 0, '', $conf->entity);
+    dolibarr_set_const($db, "DIGIRISKDOLIBARR_DIGIAI_ENDPOINT", $digiaiEndpoint, 'chaine', 0, '', $conf->entity);
+    dolibarr_set_const($db, "DIGIRISKDOLIBARR_DIGIAI_ENABLE_CHATBOT", $digiaiEnableChatbot ? 1 : 0, 'chaine', 0, '', $conf->entity);
 }
 // Actions set_mod, update_mask
 require_once __DIR__ . '/../../../saturne/core/tpl/actions/admin_conf_actions.tpl.php';
@@ -100,9 +113,44 @@ print '</tr>';
 
 print '<tr class="oddeven"><td><label for="OpenAIApiKey">' . $langs->trans("OpenAIApiKey") . '</label></td>';
 print '<td>' . $langs->trans("OpenAIApiKeyDescription") . '</td>';
-print '<td><input type="text" name="OpenAIApiKey" value="' . $conf->global->DIGIRISKDOLIBARR_CHATGPT_API_KEY . '"></td>';
+print '<td><input type="text" name="OpenAIApiKey" value="' . dol_escape_htmltag($conf->global->DIGIRISKDOLIBARR_CHATGPT_API_KEY) . '"></td>';
 print '<td><input type="submit" class="button" name="save" value="' . $langs->trans("Save") . '">';
 print '</td></tr>';
+
+print '<tr class="oddeven"><td><label for="DigiaiModel">' . $langs->trans("DigiAiModel") . '</label></td>';
+print '<td>' . $langs->trans("DigiAiModelDescription") . '</td>';
+print '<td><input type="text" name="DigiaiModel" value="' . dol_escape_htmltag($conf->global->DIGIRISKDOLIBARR_DIGIAI_MODEL) . '"></td>';
+print '<td></td></tr>';
+
+print '<tr class="oddeven"><td><label for="DigiaiTemperature">' . $langs->trans("DigiAiTemperature") . '</label></td>';
+print '<td>' . $langs->trans("DigiAiTemperatureDescription") . '</td>';
+print '<td><input type="number" step="0.1" min="0" max="1" name="DigiaiTemperature" value="' . dol_escape_htmltag($conf->global->DIGIRISKDOLIBARR_DIGIAI_TEMPERATURE) . '"></td>';
+print '<td></td></tr>';
+
+print '<tr class="oddeven"><td><label for="DigiaiMaxTokens">' . $langs->trans("DigiAiMaxTokens") . '</label></td>';
+print '<td>' . $langs->trans("DigiAiMaxTokensDescription") . '</td>';
+print '<td><input type="number" min="1" name="DigiaiMaxTokens" value="' . dol_escape_htmltag($conf->global->DIGIRISKDOLIBARR_DIGIAI_MAX_TOKENS) . '"></td>';
+print '<td></td></tr>';
+
+print '<tr class="oddeven"><td><label for="DigiaiCacheTtl">' . $langs->trans("DigiAiCacheTtl") . '</label></td>';
+print '<td>' . $langs->trans("DigiAiCacheTtlDescription") . '</td>';
+print '<td><input type="number" min="0" name="DigiaiCacheTtl" value="' . dol_escape_htmltag($conf->global->DIGIRISKDOLIBARR_DIGIAI_CACHE_TTL) . '"></td>';
+print '<td></td></tr>';
+
+print '<tr class="oddeven"><td><label for="DigiaiEndpoint">' . $langs->trans("DigiAiEndpoint") . '</label></td>';
+print '<td>' . $langs->trans("DigiAiEndpointDescription") . '</td>';
+print '<td><input type="text" name="DigiaiEndpoint" value="' . dol_escape_htmltag($conf->global->DIGIRISKDOLIBARR_DIGIAI_ENDPOINT) . '"></td>';
+print '<td></td></tr>';
+
+print '<tr class="oddeven"><td><label for="DigiaiEnableChatbot">' . $langs->trans("DigiAiEnableChatbot") . '</label></td>';
+print '<td>' . $langs->trans("DigiAiEnableChatbotDescription") . '</td>';
+print '<td>';
+print '<select name="DigiaiEnableChatbot" id="DigiaiEnableChatbot">';
+print '<option value="0"' . (empty($conf->global->DIGIRISKDOLIBARR_DIGIAI_ENABLE_CHATBOT) ? ' selected' : '') . '>' . $langs->trans('No') . '</option>';
+print '<option value="1"' . (!empty($conf->global->DIGIRISKDOLIBARR_DIGIAI_ENABLE_CHATBOT) ? ' selected' : '') . '>' . $langs->trans('Yes') . '</option>';
+print '</select>';
+print '</td>';
+print '<td></td></tr>';
 
 print '</table>';
 print '</form>';

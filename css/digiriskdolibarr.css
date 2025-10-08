@@ -3852,3 +3852,326 @@ tr.liste_titre th.liste_titre:not(.maxwidthsearch), tr.liste_titre td.liste_titr
     padding-left: 0px;
   }
 }
+.digiai-highlight {
+  animation: digiaiFade 2s ease-in-out;
+}
+
+@keyframes digiaiFade {
+  0% {
+    background-color: rgba(67, 160, 71, 0.25);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.digiai-chatbot {
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  padding: 1.5em;
+  max-width: 480px;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25em;
+}
+
+.digiai-chatbot__header {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+}
+
+.digiai-chatbot__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #0d8aff;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4em;
+  box-shadow: 0 6px 12px rgba(13, 138, 255, 0.35);
+}
+
+.digiai-chatbot__title {
+  font-size: 1.2em;
+  margin: 0;
+  color: #0f172a;
+}
+
+.digiai-chatbot__subtitle {
+  margin: 0.25em 0 0;
+  font-size: 0.9em;
+  color: #475569;
+  line-height: 1.4;
+}
+
+.digiai-chatbot__messages {
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 0.5em;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75em;
+}
+
+.digiai-chatbot__message {
+  display: flex;
+}
+
+.digiai-chatbot__message--user {
+  justify-content: flex-end;
+}
+
+.digiai-chatbot__message--assistant {
+  justify-content: flex-start;
+}
+
+.digiai-chatbot__bubble {
+  padding: 0.65em 0.9em;
+  border-radius: 12px;
+  max-width: 100%;
+  line-height: 1.5;
+  font-size: 0.95em;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+  background: #fff;
+  color: #0f172a;
+  white-space: normal;
+}
+
+.digiai-chatbot__message--user .digiai-chatbot__bubble {
+  background: #0d8aff;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(13, 138, 255, 0.25);
+}
+
+.digiai-chatbot__message--assistant .digiai-chatbot__bubble {
+  background: #f1f5f9;
+  color: #1e293b;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.digiai-chatbot__bubble ul {
+  padding-left: 1.1em;
+  margin: 0.5em 0 0;
+}
+
+.digiai-chatbot__bubble p {
+  margin: 0.25em 0;
+}
+
+.digiai-chatbot__form textarea {
+  width: 100%;
+  min-height: 110px;
+  resize: vertical;
+  margin-bottom: 0.75em;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 0.75em 1em;
+  font-size: 0.95em;
+  line-height: 1.5;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.digiai-chatbot__form textarea:focus {
+  border-color: #0d8aff;
+  box-shadow: 0 0 0 3px rgba(13, 138, 255, 0.2);
+  outline: none;
+}
+
+.digiai-chatbot__actions {
+  text-align: right;
+}
+
+.digiai-chatbot__actions .button.small {
+  padding: 0.55em 1.5em;
+  border-radius: 9999px;
+  background: #0d8aff;
+  border: none;
+  box-shadow: 0 10px 18px rgba(13, 138, 255, 0.28);
+}
+
+.digiai-chatbot__insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75em;
+}
+
+.digiai-chatbot__card {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+  padding: 0.75em;
+  font-size: 0.85em;
+  color: #1e293b;
+  line-height: 1.4;
+}
+
+.digiai-chatbot__card h5 {
+  margin: 0 0 0.5em;
+  font-size: 0.9em;
+  color: #0f172a;
+}
+
+.digiai-chatbot__card ul {
+  margin: 0;
+  padding-left: 1.1em;
+}
+
+.digiai-chatbot__metrics {
+  font-weight: 600;
+  font-size: 1.1em;
+}
+
+.digiai-public-widget {
+  margin-bottom: 2em;
+  padding: 1.5em;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.digiai-public-widget h3 {
+  margin-top: 0;
+  margin-bottom: 0.5em;
+}
+
+.digiai-public-widget p {
+  margin-bottom: 1em;
+  color: #4a4a4a;
+}
+
+.digiai-public-widget__header {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  margin-bottom: 1em;
+}
+
+.digiai-public-widget__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #0d8aff;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6em;
+  box-shadow: 0 10px 20px rgba(13, 138, 255, 0.3);
+}
+
+.digiai-public-widget__subtitle {
+  margin: 0.2em 0 0;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.digiai-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1em;
+  margin-top: 1.5em;
+}
+
+.digiai-summary-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  padding: 1.1em;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+  min-height: 140px;
+}
+
+.digiai-summary-card h4 {
+  margin: 0 0 0.75em;
+  font-size: 1em;
+  color: #0f172a;
+}
+
+.digiai-summary-card--full {
+  grid-column: 1 / -1;
+}
+
+.digiai-summary-details {
+  margin: 0;
+  padding: 0;
+}
+
+.digiai-summary-details div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5em;
+  margin-bottom: 0.4em;
+}
+
+.digiai-summary-details dt {
+  font-weight: 600;
+  color: #334155;
+}
+
+.digiai-summary-details dd {
+  margin: 0;
+  text-align: right;
+  color: #0f172a;
+}
+
+.digiai-badge {
+  display: inline-block;
+  padding: 0.2em 0.7em;
+  border-radius: 999px;
+  background: rgba(13, 138, 255, 0.12);
+  color: #0d8aff;
+  font-weight: 600;
+  min-width: 60px;
+  text-align: center;
+}
+
+.digiai-badge[data-status*='valid'] {
+  background: rgba(46, 204, 113, 0.15);
+  color: #219653;
+}
+
+.digiai-badge[data-status*='reject'] {
+  background: rgba(235, 87, 87, 0.15);
+  color: #d84343;
+}
+
+.digiai-badge[data-status=''] {
+  background: rgba(148, 163, 184, 0.15);
+  color: #475569;
+}
+
+.digiai-badge--visible {
+  background: rgba(13, 138, 255, 0.12);
+}
+
+.digiai-list {
+  margin: 0;
+  padding-left: 1.1em;
+  color: #1e293b;
+  line-height: 1.5;
+}
+
+.digiai-empty-state {
+  margin: 0;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.digiai-link {
+  color: #0d8aff;
+  text-decoration: underline;
+}
+
+.digiai-evaluation {
+  margin-bottom: 0.6em;
+}
+
+.digiai-evaluation h5 {
+  margin: 0 0 0.45em;
+  font-size: 0.95em;
+  color: #0f172a;
+}

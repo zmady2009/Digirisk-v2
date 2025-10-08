@@ -4,7 +4,12 @@
  * @since   21.1.0
  * @version 21.1.0
  */
-window.digiriskdolibarr.digiai = {};
+window.digiriskdolibarr.digiai = {
+  state: {
+    history: [],
+    lastAnalysis: null
+  }
+};
 
 /**
  * La méthode appelée automatiquement par la bibliothèque DigiriskDolibarr.
@@ -17,6 +22,7 @@ window.digiriskdolibarr.digiai = {};
 window.digiriskdolibarr.digiai.init = function() {
   window.digiriskdolibarr.digiai.event();
   window.digiriskdolibarr.digiai.initTabs();
+  window.digiriskdolibarr.digiai.restoreHistory();
   // window.digiriskdolibarr.digiai.bypassSaturneForDigiAI();
 };
 
@@ -67,6 +73,115 @@ window.digiriskdolibarr.digiai.switchTab = function(e) {
 
   $(this).addClass('active');
   $('#' + targetTab).addClass('active');
+};
+
+/**
+ * Restore DigiAI local history from storage.
+ *
+ * @since   23.0.0
+ * @version 23.0.0
+ *
+ * @return {void}
+ */
+window.digiriskdolibarr.digiai.restoreHistory = function() {
+  try {
+    const saved = localStorage.getItem('digiai.history');
+    if (!saved) {
+      return;
+    }
+
+    const parsed = JSON.parse(saved);
+    if (Array.isArray(parsed)) {
+      window.digiriskdolibarr.digiai.state.history = parsed;
+    }
+    window.digiriskdolibarr.digiai.renderHistory();
+  } catch (error) {
+    console.warn('Unable to restore DigiAI history', error);
+  }
+};
+
+/**
+ * Persist current DigiAI history to storage.
+ *
+ * @since   23.0.0
+ * @version 23.0.0
+ *
+ * @return {void}
+ */
+window.digiriskdolibarr.digiai.persistHistory = function() {
+  try {
+    localStorage.setItem('digiai.history', JSON.stringify(window.digiriskdolibarr.digiai.state.history));
+  } catch (error) {
+    console.warn('Unable to persist DigiAI history', error);
+  }
+};
+
+/**
+ * Render local analysis history list if the placeholder exists.
+ *
+ * @since   23.0.0
+ * @version 23.0.0
+ *
+ * @return {void}
+ */
+window.digiriskdolibarr.digiai.renderHistory = function() {
+  const container = document.querySelector('[data-digiai-history]');
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = '';
+  window.digiriskdolibarr.digiai.state.history.forEach((entry, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'button small digiai-history-entry';
+    button.textContent = `${entry.label} — ${entry.timestamp}`;
+    button.addEventListener('click', () => {
+      window.digiriskdolibarr.digiai.displayResults(entry.payload, true);
+    });
+
+    container.appendChild(button);
+    if (index < window.digiriskdolibarr.digiai.state.history.length - 1) {
+      container.appendChild(document.createElement('br'));
+    }
+  });
+};
+
+/**
+ * Pushes a new entry in history and persists it.
+ *
+ * @param {Object} payload
+ * @return {void}
+ */
+window.digiriskdolibarr.digiai.pushHistoryEntry = function(payload) {
+  const history = window.digiriskdolibarr.digiai.state.history;
+  const metadata = payload && payload.metadata ? payload.metadata : {};
+  const entry = {
+    label: metadata.label || window.digiriskdolibarr.digiai.buildDefaultLabel(payload),
+    timestamp: new Date().toLocaleString(),
+    payload: payload
+  };
+
+  history.unshift(entry);
+
+  if (history.length > 10) {
+    history.length = 10;
+  }
+
+  window.digiriskdolibarr.digiai.persistHistory();
+  window.digiriskdolibarr.digiai.renderHistory();
+};
+
+/**
+ * Builds a default label for an analysis result.
+ *
+ * @param {Object} payload
+ * @return {string}
+ */
+window.digiriskdolibarr.digiai.buildDefaultLabel = function(payload) {
+  const riskCount = payload && Array.isArray(payload.risks) ? payload.risks.length : 0;
+  const summaries = payload && Array.isArray(payload.summaries) ? payload.summaries.join(', ') : '';
+  return `Analyse (${riskCount} risques) ${summaries}`.trim();
 };
 
 /**
@@ -139,7 +254,7 @@ window.digiriskdolibarr.digiai.submitImageForm = async function(e) {
     formData.append('image_file', blob, fileLinked);
     formData.append('action', 'analyze_image');
 
-    window.digiriskdolibarr.digiai.getChatGptResponse(formData);
+    await window.digiriskdolibarr.digiai.getChatGptResponse(formData);
 
   } catch (error) {
     console.error('Erreur lors du chargement de l\'image:', error);
@@ -182,7 +297,7 @@ window.digiriskdolibarr.digiai.submitTextForm = async function(e) {
   formData.append('action', 'analyze_text');
   formData.append('analysis_text', text);
 
-  window.digiriskdolibarr.digiai.getChatGptResponse(formData)
+  await window.digiriskdolibarr.digiai.getChatGptResponse(formData);
 
 };
 
@@ -196,40 +311,54 @@ window.digiriskdolibarr.digiai.submitTextForm = async function(e) {
  */
 window.digiriskdolibarr.digiai.getChatGptResponse = async function(formData) {
 
-  let token = window.saturne.toolbox.getToken();
+  let token = '';
+  try {
+    if (window.saturne && window.saturne.toolbox && typeof window.saturne.toolbox.getToken === 'function') {
+      token = window.saturne.toolbox.getToken();
+    }
+  } catch (error) {
+    console.warn('DigiAI token unavailable', error);
+  }
 
   try {
-    let chatGptResponse = await fetch('backend_endpoint_for_chatgpt.php?token=' + token, {
+    const chatGptResponse = await fetch('backend_endpoint_for_chatgpt.php?token=' + encodeURIComponent(token || ''), {
       method: 'POST',
-      body: formData
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
     });
 
-    if (!chatGptResponse.ok) {
-      throw new Error('Pas de clé API ou de jetons suffisants, veuillez configurer votre clé API dans "Configuration => DigiAI"');
-    }
-    let chatGptData = await chatGptResponse.json();
-
-    if (chatGptData.error) {
-      throw new Error('Pas de clé API ou de jetons suffisants, veuillez configurer votre clé API dans "Configuration => DigiAI"');
+    if (!chatGptResponse || typeof chatGptResponse.ok === 'undefined') {
+      throw new Error('Réponse réseau DigiAI invalide');
     }
 
-    let rawContent = chatGptData.choices[0].message.content.trim();
-    let cleanedContent = rawContent.replace(/^```json\s*|```$/g, '').trim();
-
+    let chatGptData;
     try {
-      JSON.parse(cleanedContent);
-    } catch (e) {
-      throw new Error('Erreur lors de l\'analyse de l\'image, veuillez réessayer');
+      chatGptData = await chatGptResponse.json();
+    } catch (parseError) {
+      throw new Error('Réponse DigiAI illisible');
     }
-    let risque = JSON.parse(cleanedContent);
 
-    window.digiriskdolibarr.digiai.displayResults(risque);
+    if (!chatGptResponse.ok || !chatGptData || !chatGptData.success) {
+      const message = chatGptData && chatGptData.error ? chatGptData.error : 'Erreur lors de l\'appel DigiAI';
+      throw new Error(message);
+    }
+
+    window.digiriskdolibarr.digiai.state.lastAnalysis = {
+      payload: chatGptData.data,
+      timestamp: new Date().toISOString()
+    };
+
+    window.digiriskdolibarr.digiai.displayResults(chatGptData.data);
+    window.digiriskdolibarr.digiai.pushHistoryEntry(chatGptData.data);
 
   } catch (error) {
-    alert(error.message);
+    console.error('DigiAI error', error);
+    alert(error.message || 'Erreur inconnue DigiAI');
     $('#digiai_modal').removeClass('modal-active');
   }
-}
+};
 
 /**
  * Affiche les résultats d'analyse dans le tableau
@@ -240,7 +369,10 @@ window.digiriskdolibarr.digiai.getChatGptResponse = async function(formData) {
  * @param {Array} risks - Liste des risques détectés
  * @return {void}
  */
-window.digiriskdolibarr.digiai.displayResults = function(risks) {
+window.digiriskdolibarr.digiai.displayResults = function(payload, fromHistory) {
+  if (typeof fromHistory === 'undefined') {
+    fromHistory = false;
+  }
   $('.modal-analyse-phase').fadeOut(400, function () {
     $('.modal-result-phase').fadeIn(400);
   });
@@ -251,17 +383,27 @@ window.digiriskdolibarr.digiai.displayResults = function(risks) {
   tbody.empty();
 
   let dolUrlRoot = $('#dol_url_root').val();
-  const categoryMap = window.digiriskdolibarr.categoryMap;
+  const categoryMap = (window.digiriskdolibarr && window.digiriskdolibarr.categoryMap) ? window.digiriskdolibarr.categoryMap : {};
+
+  let risks = [];
+  if (payload && Array.isArray(payload.risks)) {
+    risks = payload.risks;
+  } else if (Array.isArray(payload)) {
+    risks = payload;
+  }
 
   risks.forEach((risque, index) => {
     let tr = $('<tr class="oddeven" id="new_risk' + index + '">');
 
-    let title = risque.title;
+    let title = typeof risque.title === 'string' && risque.title.length ? risque.title : 'generic';
     tr.attr('data-category', title);
 
-    let cotation = parseInt(risque.cotation);
-    let description = risque.description;
-    let prevention_actions = risque.prevention_actions;
+    let cotation = parseInt(risque.cotation, 10);
+    if (Number.isNaN(cotation)) {
+      cotation = 0;
+    }
+    let description = typeof risque.description === 'string' ? risque.description : '';
+    let prevention_actions = Array.isArray(risque.prevention_actions) ? risque.prevention_actions : Array.isArray(risque.actions) ? risque.actions : [];
 
     let descInput = window.digiriskdolibarr.risk_table_common.createDescriptionTextarea(description);
     let cotationInput = window.digiriskdolibarr.risk_table_common.createCotationElement(cotation);
@@ -269,7 +411,7 @@ window.digiriskdolibarr.digiai.displayResults = function(risks) {
 
     let riskImgContainer = window.digiriskdolibarr.risk_table_common.createCategoryImage(
       dolUrlRoot + '/custom/digiriskdolibarr/img/categorieDangers/' + title + '.png',
-      categoryMap[title] || 'Catégorie inconnue'
+      (categoryMap && typeof categoryMap === 'object' && categoryMap[title]) ? categoryMap[title] : 'Catégorie inconnue'
     );
 
     let checkbox = window.digiriskdolibarr.risk_table_common.createCheckbox('select-risk', 'submit_selected_risks');
@@ -285,6 +427,215 @@ window.digiriskdolibarr.digiai.displayResults = function(risks) {
 
   // Gérer le bouton de soumission
   window.digiriskdolibarr.digiai.handleSubmitButton();
+
+  window.digiriskdolibarr.digiai.renderMetadata(payload);
+  if (!fromHistory) {
+    window.digiriskdolibarr.digiai.highlightNewResults();
+  }
+};
+
+/**
+ * Render metadata, recommendations and summaries when placeholders are present.
+ *
+ * @param {Object} payload
+ * @return {void}
+ */
+window.digiriskdolibarr.digiai.renderMetadata = function(payload) {
+  if (!payload) {
+    return;
+  }
+
+  const metadata = payload && typeof payload.metadata === 'object' ? payload.metadata : {};
+
+  const recommendationContainer = document.querySelector('[data-digiai-recommendations]');
+  if (recommendationContainer) {
+    const recommendations = Array.isArray(payload.recommendations) ? payload.recommendations : [];
+    recommendationContainer.innerHTML = '';
+    const recommendationEmpty = recommendationContainer.getAttribute('data-empty') || '';
+    if (recommendations.length === 0) {
+      recommendationContainer.innerHTML = '<p class="digiai-empty-state">' + recommendationEmpty + '</p>';
+    } else {
+      const list = document.createElement('ul');
+      list.className = 'digiai-list';
+      recommendations.forEach((item) => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        list.appendChild(li);
+      });
+      recommendationContainer.appendChild(list);
+    }
+  }
+
+  const summaryContainer = document.querySelector('[data-digiai-summaries]');
+  if (summaryContainer) {
+    const summaries = Array.isArray(payload.summaries) ? payload.summaries : [];
+    const summaryEmpty = summaryContainer.getAttribute('data-empty') || '';
+    if (summaries.length === 0) {
+      summaryContainer.textContent = summaryEmpty;
+    } else {
+      summaryContainer.textContent = summaries.join(' • ');
+    }
+  }
+
+  const confidenceContainer = document.querySelector('[data-digiai-confidence]');
+  if (confidenceContainer) {
+    const confidenceValue = typeof metadata.confidence !== 'undefined' ? metadata.confidence : null;
+    const confidenceEmpty = confidenceContainer.getAttribute('data-empty') || '';
+    confidenceContainer.textContent = confidenceValue !== null && confidenceValue !== '' ? confidenceValue + '%' : confidenceEmpty;
+    if (confidenceValue !== null && confidenceValue !== '') {
+      confidenceContainer.classList.add('digiai-badge--visible');
+    } else {
+      confidenceContainer.classList.remove('digiai-badge--visible');
+    }
+  }
+
+  const statusContainer = document.querySelector('[data-digiai-status]');
+  if (statusContainer) {
+    const status = metadata.status_label || metadata.status || '';
+    const statusEmpty = statusContainer.getAttribute('data-empty') || '';
+    statusContainer.textContent = status || statusEmpty;
+    statusContainer.setAttribute('data-status', status ? status.toLowerCase() : '');
+  }
+
+  const reviewerContainer = document.querySelector('[data-digiai-reviewer]');
+  if (reviewerContainer) {
+    const reviewer = metadata.reviewer || metadata.validated_by || '';
+    const reviewerEmpty = reviewerContainer.getAttribute('data-empty') || '';
+    reviewerContainer.textContent = reviewer || reviewerEmpty;
+  }
+
+  const commentContainer = document.querySelector('[data-digiai-comment]');
+  if (commentContainer) {
+    const comment = metadata.validation_comment || metadata.comment || '';
+    const commentEmpty = commentContainer.getAttribute('data-empty') || '';
+    commentContainer.textContent = comment || commentEmpty;
+  }
+
+  const labelTarget = document.querySelector('[data-digiai-label]');
+  if (labelTarget) {
+    const labelEmpty = labelTarget.getAttribute('data-empty') || '';
+    labelTarget.textContent = metadata.label || labelEmpty;
+  }
+
+  window.digiriskdolibarr.digiai.renderEvaluations(payload.evaluations);
+  window.digiriskdolibarr.digiai.renderDocumentInsights(payload.documents || payload.document_sections);
+};
+
+window.digiriskdolibarr.digiai.renderEvaluations = function(evaluations) {
+  const container = document.querySelector('[data-digiai-evaluations]');
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = '';
+  const evalData = evaluations && typeof evaluations === 'object' ? evaluations : {};
+
+  const labelMap = {
+    environmental: container.getAttribute('data-label-environmental'),
+    psychosocial: container.getAttribute('data-label-psychosocial'),
+    ergonomic: container.getAttribute('data-label-ergonomic'),
+    action_plan: container.getAttribute('data-label-action'),
+  };
+
+  let hasContent = false;
+  Object.keys(evalData).forEach((key) => {
+    const items = Array.isArray(evalData[key]) ? evalData[key] : [];
+    if (items.length === 0) {
+      return;
+    }
+    hasContent = true;
+    const section = document.createElement('div');
+    section.className = 'digiai-evaluation';
+
+    const title = document.createElement('h5');
+    title.textContent = labelMap[key] || key;
+    section.appendChild(title);
+
+    const list = document.createElement('ul');
+    list.className = 'digiai-list';
+    items.forEach((item) => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      list.appendChild(li);
+    });
+    section.appendChild(list);
+
+    container.appendChild(section);
+  });
+
+  if (!hasContent) {
+    const emptyText = container.getAttribute('data-empty') || '';
+    container.innerHTML = '<p class="digiai-empty-state">' + emptyText + '</p>';
+  }
+};
+
+window.digiriskdolibarr.digiai.renderDocumentInsights = function(documents) {
+  const container = document.querySelector('[data-digiai-documents]');
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = '';
+  const docItems = documents && typeof documents === 'object' ? documents : {};
+  let entries = [];
+
+  if (Array.isArray(docItems)) {
+    entries = docItems.slice();
+  } else {
+    Object.values(docItems).forEach((value) => {
+      if (Array.isArray(value)) {
+        entries = entries.concat(value);
+      } else if (value) {
+        entries.push(value);
+      }
+    });
+  }
+
+  if (!entries.length) {
+    const emptyText = container.getAttribute('data-empty') || '';
+    container.innerHTML = '<p class="digiai-empty-state">' + emptyText + '</p>';
+    return;
+  }
+
+  const list = document.createElement('ul');
+  list.className = 'digiai-list';
+  entries.forEach((entry) => {
+    const li = document.createElement('li');
+    if (typeof entry === 'string') {
+      li.textContent = entry;
+    } else if (entry && entry.title) {
+      li.textContent = entry.title;
+      if (entry.description) {
+        li.appendChild(document.createTextNode(' — ' + entry.description));
+      }
+    }
+    if (entry && entry.url) {
+      const link = document.createElement('a');
+      link.href = entry.url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      const linkLabel = container.getAttribute('data-link-label') || 'Ouvrir';
+      link.textContent = linkLabel;
+      link.className = 'digiai-link';
+      li.appendChild(document.createTextNode(' '));
+      li.appendChild(link);
+    }
+    list.appendChild(li);
+  });
+
+  container.appendChild(list);
+};
+
+/**
+ * Adds a temporary highlight animation to new table rows.
+ *
+ * @return {void}
+ */
+window.digiriskdolibarr.digiai.highlightNewResults = function() {
+  $('#risque_table tbody tr').addClass('digiai-highlight');
+  setTimeout(function() {
+    $('#risque_table tbody tr').removeClass('digiai-highlight');
+  }, 2000);
 };
 
 /**

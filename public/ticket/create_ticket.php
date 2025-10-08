@@ -61,7 +61,7 @@ require_once __DIR__ . '/../../../saturne/class/saturnesignature.class.php';
 global $conf, $db, $hookmanager, $langs, $mc, $user;
 
 // Load translation files required by the page
-saturne_load_langs(['companies', 'other', 'mails', 'ticket']);
+saturne_load_langs(['companies', 'other', 'mails', 'ticket', 'digiriskdolibarr@digiriskdolibarr']);
 
 // Get parameters
 $action      = GETPOST('action', 'aZ09');
@@ -455,6 +455,9 @@ if (empty($resHook)) {
 
 $title  = $langs->trans('CreateTicket');
 $moreJS = ['/saturne/js/includes/signature-pad.min.js'];
+if (!empty($conf->global->DIGIRISKDOLIBARR_DIGIAI_ENABLE_CHATBOT)) {
+    $moreJS[] = '/custom/digiriskdolibarr/js/modules/digiai.chatbot.js';
+}
 
 $conf->dol_hide_topmenu  = 1;
 $conf->dol_hide_leftmenu = 1;
@@ -468,9 +471,35 @@ if ($entity > 0) {
 		exit();
 	}
 
-	print '<div class="ticketpublicarea digirisk-page-container">';
+        print '<div class="ticketpublicarea digirisk-page-container">';
 
-	print load_fiche_titre($langs->trans("CreateTicket"), '', "digiriskdolibarr_color@digiriskdolibarr");
+        print load_fiche_titre($langs->trans("CreateTicket"), '', "digiriskdolibarr_color@digiriskdolibarr");
+
+        if (!empty($conf->global->DIGIRISKDOLIBARR_DIGIAI_ENABLE_CHATBOT)) {
+                $chatbotEndpoint = dol_buildpath('/custom/digiriskdolibarr/core/ajax/digiai_chat.php', 1);
+                print '<div class="digiai-public-widget">';
+                print '<div class="digiai-public-widget__header">';
+                print '  <div class="digiai-public-widget__icon"><i class="fas fa-robot" aria-hidden="true"></i></div>';
+                print '  <div>';
+                print '    <h3>' . dol_escape_htmltag($langs->trans('DigiAiChatbotTitle')) . '</h3>';
+                print '    <p class="digiai-public-widget__subtitle">' . dol_escape_htmltag($langs->trans('DigiAiChatbotDescription')) . '</p>';
+                print '  </div>';
+                print '</div>';
+                print '<div data-digiai-chatbot'
+                    . ' data-digiai-endpoint="' . dol_escape_htmltag($chatbotEndpoint) . '"'
+                    . ' data-placeholder="' . dol_escape_htmltag($langs->trans('DigiAiChatbotPlaceholder')) . '"'
+                    . ' data-send-label="' . dol_escape_htmltag($langs->trans('DigiAiChatbotSend')) . '"'
+                    . ' data-loading-label="' . dol_escape_htmltag($langs->trans('DigiAiChatbotLoading')) . '"'
+                    . ' data-title="' . dol_escape_htmltag($langs->trans('DigiAiChatbotAssistantTitle')) . '"'
+                    . ' data-subtitle="' . dol_escape_htmltag($langs->trans('DigiAiChatbotAssistantSubtitle')) . '"'
+                    . ' data-recommendations-label="' . dol_escape_htmltag($langs->trans('DigiAiChatbotInsightRecommendations')) . '"'
+                    . ' data-recommendations-empty="' . dol_escape_htmltag($langs->trans('DigiAiChatbotInsightNoRecommendations')) . '"'
+                    . ' data-summaries-label="' . dol_escape_htmltag($langs->trans('DigiAiChatbotInsightSummaries')) . '"'
+                    . ' data-summaries-empty="' . dol_escape_htmltag($langs->trans('DigiAiChatbotInsightNoSummaries')) . '"'
+                    . ' data-confidence-label="' . dol_escape_htmltag($langs->trans('DigiAiChatbotInsightConfidence')) . '"'
+                    . ' data-confidence-empty="' . dol_escape_htmltag($langs->trans('DigiAiChatbotInsightNoConfidence')) . '"></div>';
+                print '</div>';
+        }
 
 	print '<form method="POST" action="' . $_SERVER["PHP_SELF"] . '?entity=' . $entity . '" id="public-ticket-form">';
 	print '<input type="hidden" name="token" value="' . newToken() . '">';
