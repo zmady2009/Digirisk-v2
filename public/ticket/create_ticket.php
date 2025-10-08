@@ -497,10 +497,8 @@ if ($entity > 0) {
                     . ' data-summaries-label="' . dol_escape_htmltag($langs->trans('DigiAiChatbotInsightSummaries')) . '"'
                     . ' data-summaries-empty="' . dol_escape_htmltag($langs->trans('DigiAiChatbotInsightNoSummaries')) . '"'
                     . ' data-confidence-label="' . dol_escape_htmltag($langs->trans('DigiAiChatbotInsightConfidence')) . '"'
-                    . ' data-confidence-empty="' . dol_escape_htmltag($langs->trans('DigiAiChatbotInsightNoConfidence')) . '"></div>';
-                print '<h3>' . dol_escape_htmltag($langs->trans('DigiAiChatbotTitle')) . '</h3>';
-                print '<p>' . dol_escape_htmltag($langs->trans('DigiAiChatbotDescription')) . '</p>';
-                print '<div data-digiai-chatbot data-digiai-endpoint="' . dol_escape_htmltag($chatbotEndpoint) . '" data-placeholder="' . dol_escape_htmltag($langs->trans('DigiAiChatbotPlaceholder')) . '" data-send-label="' . dol_escape_htmltag($langs->trans('DigiAiChatbotSend')) . '" data-loading-label="' . dol_escape_htmltag($langs->trans('DigiAiChatbotLoading')) . '"></div>';
+                    . ' data-confidence-empty="' . dol_escape_htmltag($langs->trans('DigiAiChatbotInsightNoConfidence')) . '"'
+                    . ' data-empty-state="' . dol_escape_htmltag($langs->trans('DigiAiChatbotEmptyState')) . '"></div>';
                 print '</div>';
         }
 

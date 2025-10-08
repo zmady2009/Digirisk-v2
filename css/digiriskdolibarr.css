@@ -3868,12 +3868,14 @@ tr.liste_titre th.liste_titre:not(.maxwidthsearch), tr.liste_titre td.liste_titr
   border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: 12px;
   padding: 1.5em;
-  max-width: 480px;
+  width: 100%;
+  max-width: 100%;
   background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
   display: flex;
   flex-direction: column;
   gap: 1.25em;
+  position: relative;
 }
 
 .digiai-chatbot__header {
@@ -3906,11 +3908,6 @@ tr.liste_titre th.liste_titre:not(.maxwidthsearch), tr.liste_titre td.liste_titr
   font-size: 0.9em;
   color: #475569;
   line-height: 1.4;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 6px;
-  padding: 1em;
-  max-width: 420px;
-  background: #fff;
 }
 
 .digiai-chatbot__messages {
@@ -3920,6 +3917,23 @@ tr.liste_titre th.liste_titre:not(.maxwidthsearch), tr.liste_titre td.liste_titr
   display: flex;
   flex-direction: column;
   gap: 0.75em;
+}
+
+.digiai-chatbot__empty {
+  display: flex;
+  align-items: center;
+  gap: 0.8em;
+  padding: 1em;
+  border-radius: 10px;
+  border: 1px dashed rgba(148, 163, 184, 0.6);
+  background: rgba(241, 245, 249, 0.6);
+  color: #475569;
+  font-size: 0.9em;
+}
+
+.digiai-chatbot__empty i {
+  color: #0d8aff;
+  font-size: 1.1em;
 }
 
 .digiai-chatbot__message {
@@ -3984,9 +3998,6 @@ tr.liste_titre th.liste_titre:not(.maxwidthsearch), tr.liste_titre td.liste_titr
   border-color: #0d8aff;
   box-shadow: 0 0 0 3px rgba(13, 138, 255, 0.2);
   outline: none;
-  min-height: 90px;
-  resize: vertical;
-  margin-bottom: 0.5em;
 }
 
 .digiai-chatbot__actions {
@@ -4034,11 +4045,13 @@ tr.liste_titre th.liste_titre:not(.maxwidthsearch), tr.liste_titre td.liste_titr
 }
 
 .digiai-public-widget {
-  margin-bottom: 2em;
-  padding: 1.5em;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  background: #fff;
+  margin: 0 auto 2em;
+  padding: 1.75em;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: 0 18px 32px rgba(15, 23, 42, 0.06);
+  max-width: 760px;
 }
 
 .digiai-public-widget h3 {
@@ -4056,6 +4069,7 @@ tr.liste_titre th.liste_titre:not(.maxwidthsearch), tr.liste_titre td.liste_titr
   align-items: center;
   gap: 1em;
   margin-bottom: 1em;
+  flex-wrap: wrap;
 }
 
 .digiai-public-widget__icon {
@@ -4075,6 +4089,22 @@ tr.liste_titre th.liste_titre:not(.maxwidthsearch), tr.liste_titre td.liste_titr
   margin: 0.2em 0 0;
   color: #475569;
   line-height: 1.45;
+}
+
+@media (max-width: 768px) {
+  .digiai-public-widget {
+    padding: 1.25em;
+    border-radius: 14px;
+  }
+
+  .digiai-chatbot {
+    padding: 1.1em;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+  }
+
+  .digiai-chatbot__messages {
+    max-height: 280px;
+  }
 }
 
 .digiai-summary-grid {

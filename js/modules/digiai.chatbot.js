@@ -22,6 +22,7 @@
       this.endpoint = resolveEndpoint(root);
       this.messages = [];
       this.context = {};
+      this.emptyState = null;
       this.texts = {
         title: root.getAttribute('data-title') || 'Assistant DigiAI',
         subtitle: root.getAttribute('data-subtitle') || 'Votre copilote prévention en temps réel.',
@@ -30,7 +31,8 @@
         summariesLabel: root.getAttribute('data-summaries-label') || 'Synthèse automatique',
         summariesEmpty: root.getAttribute('data-summaries-empty') || 'Pas encore de synthèse générée.',
         confidenceLabel: root.getAttribute('data-confidence-label') || 'Indice de confiance',
-        confidenceEmpty: root.getAttribute('data-confidence-empty') || '--'
+        confidenceEmpty: root.getAttribute('data-confidence-empty') || '--',
+        emptyState: root.getAttribute('data-empty-state') || 'Posez votre première question pour démarrer la discussion.'
       };
     }
 
@@ -40,7 +42,9 @@
     }
 
     render() {
+      this.root.innerHTML = '';
       this.root.classList.add('digiai-chatbot');
+      this.root.setAttribute('data-digiai-chatbot-ready', '1');
 
       const header = document.createElement('div');
       header.className = 'digiai-chatbot__header';
@@ -64,6 +68,7 @@
 
       this.messageList = document.createElement('div');
       this.messageList.className = 'digiai-chatbot__messages';
+      this.renderEmptyState();
 
       this.insights = document.createElement('div');
       this.insights.className = 'digiai-chatbot__insights';
@@ -125,6 +130,11 @@
       bubble.appendChild(this.createContentFragment(content));
       wrapper.appendChild(bubble);
       this.messageList.appendChild(wrapper);
+
+      if (this.emptyState) {
+        this.emptyState.remove();
+        this.emptyState = null;
+      }
     }
 
     scrollToBottom() {
@@ -176,13 +186,6 @@
         }
 
         this.updateInsights(result.data || {});
-        if (Array.isArray(result.data.recommendations) && result.data.recommendations.length > 0) {
-          this.pushMessage('assistant', 'Actions proposées : ' + result.data.recommendations.join('; '));
-        }
-
-        if (Array.isArray(result.data.summaries) && result.data.summaries.length > 0) {
-          this.pushMessage('assistant', 'Résumé : ' + result.data.summaries.join(' / '));
-        }
 
       } catch (error) {
         console.error('DigiAI chatbot error', error);
@@ -311,6 +314,19 @@
 
       return fragment;
     }
+
+    renderEmptyState() {
+      this.emptyState = document.createElement('div');
+      this.emptyState.className = 'digiai-chatbot__empty';
+      const icon = document.createElement('i');
+      icon.className = 'fas fa-comment-alt';
+      icon.setAttribute('aria-hidden', 'true');
+      const text = document.createElement('p');
+      text.textContent = this.texts.emptyState;
+      this.emptyState.appendChild(icon);
+      this.emptyState.appendChild(text);
+      this.messageList.appendChild(this.emptyState);
+    }
   }
 
   window.DigiAIChatbot = DigiAIChatbot;
@@ -318,8 +334,13 @@
   document.addEventListener('DOMContentLoaded', function() {
     const containers = document.querySelectorAll('[data-digiai-chatbot]');
     containers.forEach((container) => {
+      if (container.dataset.digiaiChatbotInitialized === '1') {
+        return;
+      }
+      container.dataset.digiaiChatbotInitialized = '1';
       const chatbot = new DigiAIChatbot(container);
       chatbot.init();
+      container.digiaiChatbotInstance = chatbot;
     });
   });
 })(window, document);

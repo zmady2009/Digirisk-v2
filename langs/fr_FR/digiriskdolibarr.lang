@@ -205,6 +205,7 @@ DigiAiChatbotInsightSummaries = Synthèse de la conversation
 DigiAiChatbotInsightNoSummaries = Aucun résumé disponible pour le moment.
 DigiAiChatbotInsightConfidence = Indice de confiance IA
 DigiAiChatbotInsightNoConfidence = --
+DigiAiChatbotEmptyState = Commencez la discussion en posant votre première question à DigiAI.
 DigiAiSummaryRecommendations = Recommandations stratégiques
 DigiAiSummaryNoRecommendations = Aucune recommandation globale pour cette analyse.
 DigiAiSummarySummaries = Résumés automatiques

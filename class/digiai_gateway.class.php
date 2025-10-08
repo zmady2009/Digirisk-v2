@@ -18,6 +18,8 @@
  * along with Digirisk Dolibarr. If not, see <https://www.gnu.org/licenses/>.
  */
 
+require_once DOL_DOCUMENT_ROOT.'/core/lib/functions2.lib.php';
+
 /**
  * Gateway service responsible for orchestrating every interaction with the
  * OpenAI API for DigiAI.
@@ -220,7 +222,18 @@ class DigiaiGateway
         }
 
         $content = $responseData['choices'][0]['message']['content'];
-        $content = trim($content);
+
+        if (is_array($content)) {
+            $textParts = [];
+            foreach ($content as $block) {
+                if (is_array($block) && ($block['type'] ?? '') === 'text' && isset($block['text'])) {
+                    $textParts[] = $block['text'];
+                }
+            }
+            $content = implode("\n", $textParts);
+        }
+
+        $content = trim((string) $content);
 
         $jsonString = $this->extractJsonString($content);
         $decoded = json_decode($jsonString, true);
@@ -279,56 +292,116 @@ class DigiaiGateway
      */
     private function validateResponse(array $payload, $purpose)
     {
-        $errors = [];
         $isChatbot = ($purpose === 'chatbot');
 
         if (!isset($payload['metadata']) || !is_array($payload['metadata'])) {
             $payload['metadata'] = [];
         }
 
+        if (!isset($payload['recommendations']) || !is_array($payload['recommendations'])) {
+            $payload['recommendations'] = [];
+        }
+        if (!isset($payload['summaries']) || !is_array($payload['summaries'])) {
+            $payload['summaries'] = [];
+        }
+
         if ($isChatbot) {
             if (!isset($payload['messages']) || !is_array($payload['messages'])) {
-                $errors[] = 'messages';
-            }
-            if (!isset($payload['recommendations']) || !is_array($payload['recommendations'])) {
-                $payload['recommendations'] = [];
-            }
-            if (!isset($payload['summaries']) || !is_array($payload['summaries'])) {
-                $payload['summaries'] = [];
+                $payload['messages'] = [];
             }
         } else {
             if (!isset($payload['risks']) || !is_array($payload['risks'])) {
-                $errors[] = 'risks';
-            }
-            if (!isset($payload['recommendations']) || !is_array($payload['recommendations'])) {
-                $payload['recommendations'] = [];
-            }
-            if (!isset($payload['summaries']) || !is_array($payload['summaries'])) {
-                $payload['summaries'] = [];
+                $payload['risks'] = [];
             }
 
-            foreach ($payload['risks'] ?? [] as $index => $item) {
+            $normalizedRisks = [];
+            foreach ($payload['risks'] as $index => $item) {
                 if (!is_array($item)) {
-                    $errors[] = 'risks['.$index.']';
+                    $this->logInteraction('schema-warning', ['purpose' => $purpose], ['index' => $index], ['reason' => 'non-array-risk']);
                     continue;
                 }
-                foreach (['title', 'description', 'cotation'] as $required) {
-                    if (!array_key_exists($required, $item)) {
-                        $errors[] = 'risks['.$index.'].'.$required;
-                    }
-                }
-                if (isset($item['actions']) && !is_array($item['actions'])) {
-                    $errors[] = 'risks['.$index.'].actions';
-                }
+                $normalizedRisks[] = $this->normaliseRiskItem($item);
             }
-        }
 
-        if (!empty($errors)) {
-            $this->logInteraction('schema-error', ['purpose' => $purpose], $payload, ['fields' => $errors]);
-            throw new Exception($this->langs->transnoentities('ErrorDigiAiGatewaySchema', implode(', ', $errors)));
+            $payload['risks'] = $normalizedRisks;
         }
 
         return $payload;
+    }
+
+    /**
+     * Normalises a single risk item to guarantee required keys.
+     *
+     * @param array $item
+     *
+     * @return array
+     */
+    private function normaliseRiskItem(array $item)
+    {
+        $title = '';
+        foreach (['title', 'label', 'category'] as $key) {
+            if (!empty($item[$key]) && is_string($item[$key])) {
+                $title = $item[$key];
+                break;
+            }
+        }
+        if ($title === '') {
+            $title = 'generic';
+        }
+
+        $description = '';
+        foreach (['description', 'details', 'summary', 'text'] as $key) {
+            if (!empty($item[$key]) && is_string($item[$key])) {
+                $description = $item[$key];
+                break;
+            }
+        }
+
+        $cotation = 0;
+        foreach (['cotation', 'score', 'gravity', 'level'] as $key) {
+            if (isset($item[$key])) {
+                $value = $item[$key];
+                if (is_array($value)) {
+                    $value = array_shift($value);
+                }
+                if (is_numeric($value)) {
+                    $cotation = (int) round($value);
+                    break;
+                }
+            }
+        }
+
+        $actions = [];
+        foreach (['actions', 'prevention_actions', 'recommendations'] as $key) {
+            if (isset($item[$key])) {
+                if (is_array($item[$key])) {
+                    $actions = $item[$key];
+                } elseif (is_string($item[$key]) && dol_strlen($item[$key])) {
+                    $stringValue = str_replace("\r", '', $item[$key]);
+                    $actions = preg_split('/\n+|[\x{2022}•]/u', $stringValue);
+                    if ($actions === false) {
+                        $actions = [];
+                    }
+                }
+                break;
+            }
+        }
+
+        $actions = array_values(array_filter(array_map(function ($entry) {
+            if (is_array($entry)) {
+                $entry = implode(' ', $entry);
+            }
+            return trim((string) $entry);
+        }, $actions)));
+
+        $normalized = $item;
+        $normalized['title'] = $title;
+        $normalized['description'] = $description;
+        $normalized['cotation'] = $cotation;
+        $normalized['actions'] = $actions;
+        $normalized['prevention_actions'] = $actions;
+
+        return $normalized;
     }
 
     /**
