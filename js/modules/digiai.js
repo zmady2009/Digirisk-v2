@@ -392,6 +392,13 @@ window.digiriskdolibarr.digiai.displayResults = function(payload, fromHistory) {
     risks = payload;
   }
 
+  let risks = [];
+  if (payload && Array.isArray(payload.risks)) {
+    risks = payload.risks;
+  } else if (Array.isArray(payload)) {
+    risks = payload;
+  }
+
   risks.forEach((risque, index) => {
     let tr = $('<tr class="oddeven" id="new_risk' + index + '">');
 
@@ -554,6 +561,11 @@ window.digiriskdolibarr.digiai.renderEvaluations = function(evaluations) {
     const list = document.createElement('ul');
     list.className = 'digiai-list';
     items.forEach((item) => {
+  const recommendationContainer = document.querySelector('[data-digiai-recommendations]');
+  if (recommendationContainer) {
+    recommendationContainer.innerHTML = '';
+    const list = document.createElement('ul');
+    (Array.isArray(payload.recommendations) ? payload.recommendations : []).forEach((item) => {
       const li = document.createElement('li');
       li.textContent = item;
       list.appendChild(li);
@@ -624,6 +636,18 @@ window.digiriskdolibarr.digiai.renderDocumentInsights = function(documents) {
   });
 
   container.appendChild(list);
+    recommendationContainer.appendChild(list);
+  }
+
+  const summaryContainer = document.querySelector('[data-digiai-summaries]');
+  if (summaryContainer) {
+    summaryContainer.textContent = (Array.isArray(payload.summaries) ? payload.summaries.join(' / ') : '');
+  }
+
+  const confidenceContainer = document.querySelector('[data-digiai-confidence]');
+  if (confidenceContainer && payload.metadata && typeof payload.metadata.confidence !== 'undefined') {
+    confidenceContainer.textContent = payload.metadata.confidence + '%';
+  }
 };
 
 /**

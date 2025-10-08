@@ -3906,6 +3906,11 @@ tr.liste_titre th.liste_titre:not(.maxwidthsearch), tr.liste_titre td.liste_titr
   font-size: 0.9em;
   color: #475569;
   line-height: 1.4;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  padding: 1em;
+  max-width: 420px;
+  background: #fff;
 }
 
 .digiai-chatbot__messages {
@@ -3979,6 +3984,9 @@ tr.liste_titre th.liste_titre:not(.maxwidthsearch), tr.liste_titre td.liste_titr
   border-color: #0d8aff;
   box-shadow: 0 0 0 3px rgba(13, 138, 255, 0.2);
   outline: none;
+  min-height: 90px;
+  resize: vertical;
+  margin-bottom: 0.5em;
 }
 
 .digiai-chatbot__actions {

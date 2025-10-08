@@ -176,6 +176,13 @@
         }
 
         this.updateInsights(result.data || {});
+        if (Array.isArray(result.data.recommendations) && result.data.recommendations.length > 0) {
+          this.pushMessage('assistant', 'Actions proposées : ' + result.data.recommendations.join('; '));
+        }
+
+        if (Array.isArray(result.data.summaries) && result.data.summaries.length > 0) {
+          this.pushMessage('assistant', 'Résumé : ' + result.data.summaries.join(' / '));
+        }
 
       } catch (error) {
         console.error('DigiAI chatbot error', error);
