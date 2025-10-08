@@ -3852,3 +3852,76 @@ tr.liste_titre th.liste_titre:not(.maxwidthsearch), tr.liste_titre td.liste_titr
     padding-left: 0px;
   }
 }
+.digiai-highlight {
+  animation: digiaiFade 2s ease-in-out;
+}
+
+@keyframes digiaiFade {
+  0% {
+    background-color: rgba(67, 160, 71, 0.25);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+.digiai-chatbot {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  padding: 1em;
+  max-width: 420px;
+  background: #fff;
+}
+
+.digiai-chatbot__messages {
+  max-height: 320px;
+  overflow-y: auto;
+  margin-bottom: 1em;
+  padding-right: 0.5em;
+}
+
+.digiai-chatbot__message {
+  padding: 0.5em 0.75em;
+  border-radius: 6px;
+  margin-bottom: 0.5em;
+  line-height: 1.4;
+}
+
+.digiai-chatbot__message--user {
+  background: #0d8aff;
+  color: #fff;
+  text-align: right;
+}
+
+.digiai-chatbot__message--assistant {
+  background: #f1f1f1;
+  color: #333;
+}
+
+.digiai-chatbot__form textarea {
+  width: 100%;
+  min-height: 90px;
+  resize: vertical;
+  margin-bottom: 0.5em;
+}
+
+.digiai-chatbot__actions {
+  text-align: right;
+}
+
+.digiai-public-widget {
+  margin-bottom: 2em;
+  padding: 1.5em;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.digiai-public-widget h3 {
+  margin-top: 0;
+  margin-bottom: 0.5em;
+}
+
+.digiai-public-widget p {
+  margin-bottom: 1em;
+  color: #4a4a4a;
+}
