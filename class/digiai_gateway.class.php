@@ -79,6 +79,7 @@ class DigiaiGateway
         $model = $options['model'] ?? ($this->conf->global->DIGIRISKDOLIBARR_DIGIAI_MODEL ?? 'gpt-4o');
         $temperature = isset($options['temperature']) ? (float) $options['temperature'] : (float) ($this->conf->global->DIGIRISKDOLIBARR_DIGIAI_TEMPERATURE ?? 0.2);
         $maxTokens = isset($options['max_tokens']) ? (int) $options['max_tokens'] : (int) ($this->conf->global->DIGIRISKDOLIBARR_DIGIAI_MAX_TOKENS ?? 2000);
+        $context = isset($options['context']) && is_array($options['context']) ? $options['context'] : [];
 
         $payload = [
             'model' => $model,
@@ -87,9 +88,13 @@ class DigiaiGateway
             'max_tokens' => $maxTokens,
         ];
 
-        $cacheKey = $this->computeCacheKey($payload);
+        if (!empty($options['user'])) {
+            $payload['user'] = (string) $options['user'];
+        }
+
+        $cacheKey = $this->computeCacheKey($payload, $context);
         if (($cached = $this->getCache($cacheKey)) !== null) {
-            $this->logInteraction('cache-hit', $payload, $cached, ['source' => 'runtime']);
+            $this->logInteraction('cache-hit', $payload, $cached, array_merge(['source' => 'runtime'], $context));
             return $cached;
         }
 
@@ -106,18 +111,26 @@ class DigiaiGateway
                 $structuredPayload = $this->extractStructuredContent($responseData);
                 $validPayload = $this->validateResponse($structuredPayload, $options['purpose'] ?? 'risk');
                 $this->setCache($cacheKey, $validPayload);
-                $this->logInteraction('success', $payload, $validPayload, [
+                $logContext = [
                     'latency_ms' => (int) round($duration * 1000),
                     'model' => $model,
                     'temperature' => $temperature,
                     'max_tokens' => $maxTokens,
                     'attempt' => $attempts,
-                ]);
+                ];
+                if (!empty($context)) {
+                    $logContext = array_merge($context, $logContext);
+                }
+                $this->logInteraction('success', $payload, $validPayload, $logContext);
 
                 return $validPayload;
             } catch (Exception $e) {
                 $exception = $e;
-                $this->logInteraction('validation-error', $payload, ['error' => $e->getMessage()], ['attempt' => $attempts]);
+                $errorContext = ['attempt' => $attempts];
+                if (!empty($context)) {
+                    $errorContext = array_merge($context, $errorContext);
+                }
+                $this->logInteraction('validation-error', $payload, ['error' => $e->getMessage()], $errorContext);
                 if ($attempts < $maxAttempts) {
                     $payload['messages'] = $this->buildRepromptMessages($messages, $options);
                 }
@@ -448,9 +461,12 @@ class DigiaiGateway
      *
      * @return string
      */
-    private function computeCacheKey(array $payload)
+    private function computeCacheKey(array $payload, array $context = [])
     {
-        return hash('sha256', json_encode($payload));
+        return hash('sha256', json_encode([
+            'payload' => $payload,
+            'context' => $context,
+        ]));
     }
 
     /**

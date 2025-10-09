@@ -15,6 +15,10 @@ global $conf, $langs, $db;
 $langs->load('digiriskdolibarr@digiriskdolibarr');
 
 $action = GETPOST('action', 'alpha');
+$elementId = GETPOSTINT('element_id');
+if (empty($elementId)) {
+    $elementId = GETPOSTINT('id');
+}
 
 header('Content-Type: application/json');
 
@@ -24,10 +28,19 @@ try {
 
     $schemaDescription = $langs->transnoentities('DigiAiSchemaDescription');
 
-    $payload = $gateway->run($messages, [
+    $gatewayOptions = [
         'purpose' => $action,
         'schema_description' => $schemaDescription,
-    ]);
+    ];
+
+    if ($elementId > 0) {
+        $gatewayOptions['user'] = 'digiai-element-'.$elementId;
+        $gatewayOptions['context'] = [
+            'element_id' => $elementId,
+        ];
+    }
+
+    $payload = $gateway->run($messages, $gatewayOptions);
 
     echo json_encode([
         'success' => true,
