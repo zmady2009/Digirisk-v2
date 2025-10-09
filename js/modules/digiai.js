@@ -223,12 +223,12 @@ window.digiriskdolibarr.digiai.submitImageForm = async function(e) {
   e.preventDefault();
 
   window.digiriskdolibarr.digiai.resetModal('image');
-  let mediaGallery = $('#media_gallery');
-  let mediaGalleryModal = $(this).closest('.modal-container');
+  const mediaGallery = $('#media_gallery');
+  const mediaGalleryModal = $(this).closest('.modal-container');
   mediaGallery.removeClass('modal-active');
 
-  let fileLinked = mediaGalleryModal.find('.clicked-photo').first().find('.filename').val();
-  let imgSrc = mediaGalleryModal.find('.clicked-photo').first().find('img').attr('src');
+  const fileLinked = mediaGalleryModal.find('.clicked-photo').first().find('.filename').val();
+  const imgSrc = mediaGalleryModal.find('.clicked-photo').first().find('img').attr('src');
 
   if (!fileLinked) {
     alert('Veuillez sélectionner une image.');
@@ -253,6 +253,12 @@ window.digiriskdolibarr.digiai.submitImageForm = async function(e) {
     const formData = new FormData();
     formData.append('image_file', blob, fileLinked);
     formData.append('action', 'analyze_image');
+
+    const elementId = window.digiriskdolibarr.digiai.getCurrentElementId();
+    if (elementId) {
+      formData.append('id', elementId);
+      formData.append('element_id', elementId);
+    }
 
     await window.digiriskdolibarr.digiai.getChatGptResponse(formData);
 
@@ -293,12 +299,37 @@ window.digiriskdolibarr.digiai.submitTextForm = async function(e) {
 
   $('#digiai_modal').addClass('modal-active');
 
-  let formData = new FormData();
+  const formData = new FormData();
   formData.append('action', 'analyze_text');
   formData.append('analysis_text', text);
 
+  const elementId = window.digiriskdolibarr.digiai.getCurrentElementId();
+  if (elementId) {
+    formData.append('id', elementId);
+    formData.append('element_id', elementId);
+  }
+
   await window.digiriskdolibarr.digiai.getChatGptResponse(formData);
 
+};
+
+/**
+ * Retourne l'identifiant de l'élément courant lorsque disponible.
+ *
+ * @return {string}
+ */
+window.digiriskdolibarr.digiai.getCurrentElementId = function() {
+  const hiddenInput = document.getElementById('digiriskElementId');
+  if (hiddenInput && hiddenInput.value) {
+    return hiddenInput.value;
+  }
+
+  const fallback = document.querySelector('.digiai-risk-add');
+  if (fallback && fallback.getAttribute('value')) {
+    return fallback.getAttribute('value');
+  }
+
+  return '';
 };
 
 /**
